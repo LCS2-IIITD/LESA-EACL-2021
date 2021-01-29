@@ -89,6 +89,8 @@ from tensorflow.python.keras.layers import Lambda
 from tensorflow.python.keras import initializers, regularizers, constraints, optimizers, layers
 from tensorflow.python.keras import backend as K
 from helper import *
+from load_model import load_model
+
 
 # python generate_predictions --test_dataset {test}
 
@@ -139,95 +141,8 @@ X_tag_noisy_test, X_tag_semi_test, X_tag_structured_test = pad_sequences(X_tag_n
 
 # load_model
 print("Loading Model...\n\n")
-## LOAD FINE-TUNED BERT MODEL
-cwd = os.getcwd()
-model_save_path = os.path.join(cwd, "seven_finetuned")
 
-bert_tokenizer_transformer = BertTokenizer.from_pretrained(model_save_path)
-
-noisy_vocab_size_tag = 5363
-noisy_embedding_matrix_tag = load_embedding_matrix('embedding_matrix_tag_noisy.pickle')
-
-semi_vocab_size_tag = 6137
-semi_embedding_matrix_tag = load_embedding_matrix('embedding_matrix_tag_semi.pickle')
-
-structured_vocab_size_tag = 6048
-structured_embedding_matrix_tag = load_embedding_matrix('embedding_matrix_tag_structured.pickle')
-
-## PARENT POS TOKENIZER
-
-num_words_dep_parent_noisy = 100
-tokenizer_dep_parent_noisy = load_tokenizer('tokenizer_dep_parent_noisy.pickle')
-
-num_words_dep_parent_semi = 200
-tokenizer_dep_parent_semi = load_tokenizer('tokenizer_dep_parent_semi.pickle')
-
-num_words_dep_parent_structured = 200
-tokenizer_dep_parent_structured = load_tokenizer('tokenizer_dep_parent_structured.pickle')
-
-## LABEL TOKENIZER
-
-num_words_dep_noisy = 6300
-tokenizer_dep_noisy = load_tokenizer('tokenizer_dep_noisy.pickle')
-
-num_words_dep_semi = 7300
-tokenizer_dep_semi = load_tokenizer('tokenizer_dep_semi.pickle')
-
-num_words_dep_structured = 7400
-tokenizer_dep_structured = load_tokenizer('tokenizer_dep_structured.pickle')
-
-## TAG TOKENIZER
-
-tokenizer_tag_noisy = load_tokenizer('tokenizer_tag_noisy.pickle')
-
-tokenizer_tag_semi = load_tokenizer('tokenizer_tag_semi.pickle')
-
-tokenizer_tag_structured = load_tokenizer('tokenizer_tag_structured.pickle')
-
-# aux model
-
-noisy_model = ind_model_noisy(embed_dim = 20, num_heads=5, ff_dim = 128,\
-                              maxlen=maxlen, vocab_label=num_words_dep_noisy, vocab_parent_pos=num_words_dep_parent_noisy)
-
-noisy_model.load_weights('_dep_noisy.h5')
-
-semi_model = ind_model_semi(embed_dim = 20, num_heads=5, ff_dim = 128, \
-                            maxlen=maxlen, vocab_label=num_words_dep_semi, vocab_parent_pos=num_words_dep_parent_semi)
-
-semi_model.load_weights('_dep_semi.h5')
-
-structured_model = ind_model_structured(embed_dim = 20, num_heads=5, ff_dim = 128, \
-                                        maxlen=maxlen, vocab_label=num_words_dep_structured, vocab_parent_pos=num_words_dep_parent_structured)
-
-structured_model.load_weights('_dep_structured.h5')
-
-
-parameters_dict_noisy = {
-    "vocab_size_tag" : noisy_vocab_size_tag,
-    "EMBEDDING_DIM_TAG" : 20,
-    "embedding_matrix_tag" : noisy_embedding_matrix_tag,
-    "maxlen_tag" : maxlen
-}
-
-parameters_dict_semi = {
-    "vocab_size_tag" : semi_vocab_size_tag,
-    "EMBEDDING_DIM_TAG" : 20,
-    "embedding_matrix_tag" : semi_embedding_matrix_tag,
-    "maxlen_tag" : maxlen
-}
-
-parameters_dict_structured = {
-    "vocab_size_tag" : structured_vocab_size_tag,
-    "EMBEDDING_DIM_TAG" : 20,
-    "embedding_matrix_tag" : structured_embedding_matrix_tag,
-    "maxlen_tag" : maxlen
-}
-
-final_model = final(noisy_model, semi_model, structured_model,\
-                    parameters_dict_noisy, parameters_dict_semi, parameters_dict_structured,\
-                    max_seq_length=60)
-
-final_model.load_weights('_bert_comb.h5')
+final_model = load_model(maxlen)
 
 print("Model loaded!")
 
@@ -243,3 +158,4 @@ metrics = final_model.predict({"label_noisy": np.array(X_noisy_test), "parent_po
 
 y_pred_bool = [np.argmax(el) for el in metrics[-1]]
 print(classification_report(y_test, y_pred_bool))
+
